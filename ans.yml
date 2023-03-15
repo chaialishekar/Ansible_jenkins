@@ -1,0 +1,23 @@
+---
+    - name: Change ansible python interpreter to python3
+      set_fact:
+        ansible_python_interpreter: "/usr/bin/python3"
+    - name: Git Checkout Repository
+      git:
+        repo: "{{ git_url }}"
+        dest: docker-build/{{ repo_name }}
+        version: "{{ git_tag }}"
+        key_file: "/Users/chaitali.shekar/.ssh/id_rsa"
+      register: git_commit
+      
+    - name: Docker Build
+      shell: "docker build -f {{ dockerfile_path }} . -t {{ docker_host }}/{{ repo_name }}:{{ git_tag }} -t {{ docker_host }}/{{ repo_name }}:{{ git_commit.after | truncate(7, True, '') }} -t {{ docker_host }}/{{ repo_name }}:{{ tstamp.stdout }} -t {{ docker_host }}/{{ repo_name }}:latest --no-cache"
+      args:
+        chdir: docker-build/{{ repo_name }}
+    
+    - name: Docker Push Branch Tag
+      shell: "docker push {{ docker_host }}/{{ repo_name }}:{{ git_tag }}"
+    
+    - name: Docker Push Latest Tag
+      shell: "docker push {{ docker_host }}/{{ repo_name }}:latest"
+      when: git_tag == default_branch
